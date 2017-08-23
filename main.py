@@ -7,39 +7,45 @@ class query:
         self.statement = s
         print "Query:",s
         
-        newinput = parse(self)
+        newinput = parse(self) # New instance of Parse
         output = newinput.result(s)
-        self.table1 = output.tables[0]
-      #  print "Table1 Name:",self.table1
-        
-        self.table2_exists = 0
-        if(len(output.tables)>1):
-            self.table2_exists = 1
-            self.table2 = output.tables[1]
-     #   print "Table 2 Exists:", self.table2_exists
-
-        self.printcollist = output.columns
-      #  print "Columns To Be Printed:",self.printcollist
-
-        self.andFlag = 0
-        self.orFlag = 0
-
-        if((len(output.where[0])>1)):
-            if(output.where[0][2]=='and'):
-                self.andFlag = 1
-            elif(output.where[0][2]=='or'):
-                self.orFlag = 1
-        #print self.andFlag , self.orFlag
-
-        self.dict1 , self.dict2 = newinput.directcreate()
-        self.table1_where,self.table2_where,self.table_double_where = newinput.dictry(output.where[0])
-
-      #  print "Parsed Query:",output
+        newinput.separatequery(output,newinput)
+         
         print
+
 
 class parse(query):
     def __init__(self,parent):
         self.parent = parent
+
+    def separatequery(self,line,inp):
+        self.parent.table1 = line.tables[0]
+        print "Table1 Name:",self.parent.table1
+        
+        self.parent.table2_exists = 0
+        if(len(line.tables)>1):
+            self.parent.table2_exists = 1
+            self.parent.table2 = line.tables[1]
+     #   print "Table 2 Exists:", self.table2_exists
+
+        self.parent.printcollist = line.columns
+      #  print "Columns To Be Printed:",self.printcollist
+
+        self.parent.andFlag = 0
+        self.parent.orFlag = 0
+
+        if((len(line.where[0])>1)):
+            if(line.where[0][2]=='and'):
+                self.parent.andFlag = 1
+            elif(line.where[0][2]=='or'):
+                self.parent.orFlag = 1
+        #print self.andFlag , self.orFlag
+
+        self.parent.dict1 , self.parent.dict2 = inp.directcreate()
+        self.parent.table1_where,self.parent.table2_where,self.parent.table_double_where = inp.dictry(line.where[0])
+        
+      #  print "Parsed Query:",output
+
 
     def directcreate(self):
         dict1 = {}
@@ -132,11 +138,11 @@ class parse(query):
                 dict4["second_val"] = word1[2]
             print "Dictionary 4:",dict4
         if(count2==0):
-            list1.append(dict3)
+            list1.append(dict4)
         elif(count1==0):
-            list2.append(dict3)
+            list2.append(dict4)
         else:
-            list3.append(dict3)
+            list3.append(dict4)
 
         print list1
         print list2
@@ -178,7 +184,6 @@ class parse(query):
             )
         whereExpression << whereCondition + ZeroOrMore( ( and_ | or_ ) + whereCondition ) 
 
-        # define the grammar
         selectStmt <<= (SELECT + ('*' | columnNameList)("columns") + 
                         FROM + tableNameList( "tables" ) + 
                         Optional(Group(WHERE + whereExpression), "")("where"))
