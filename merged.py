@@ -1,6 +1,7 @@
 from pyparsing import Literal, CaselessLiteral, Word, delimitedList, Optional, \
     Combine, Group, alphas, nums, alphanums, ParseException, Forward, oneOf, quotedString, \
     ZeroOrMore, restOfLine, Keyword, upcaseTokens
+import re
 
 class query:
     def __init__(self,s):
@@ -8,11 +9,11 @@ class query:
 
         newinput = parse(self) # New instance of Parse
         output = newinput.result(s)
+        self.aggregate_v={"min":None,"max":None,"sum":None, "avg":None}
         newinput.separatequery(output,newinput)
         self.table1_print_names=['A','C']
         self.table2_print_names=['B']
         self.aggregate_func={}
-        self.aggregate_v={"min":None,"max":None,"sum":None, "avg":None}
         self.distinct=[{},{}]
         self.printHeaders()
         x=data_retrieve(self)
@@ -44,7 +45,6 @@ class parse(query):
             self.parent.table2_exists = True
             self.parent.table2 = line.tables[1]
 
-
         self.parent.printcollist = line.columns
 
         self.parent.andFlag = False
@@ -58,7 +58,57 @@ class parse(query):
         self.parent.dict1 , self.parent.dict2 = inp.directcreate()
         self.parent.table1_where,self.parent.table2_where,self.parent.table_double_where = inp.dictry(line.where)
 
+        self.parent.table1_print_attributes = []
+        self.parent.table2_print_attributes = []
+        
+        for i in self.parent.printcollist:
+            print "i:",i
+            if '(' in i:
+                listagg = []
+                s = re.findall(r'\((.*?)\)', i)
+                if s[0] in self.parent.dict1.keys():
+                    listagg.append(1)
+                elif s[0] in self.parent.dict2.keys():
+                    listagg.append(2)
+                listagg.append(s[0])
+                if('min' in i):
+                    self.parent.aggregate_v["min"] = listagg
+                elif('max' in i):
+                    self.parent.aggregate_v['max'] = listagg
+                elif('avg' in i):
+                    self.parent.aggregate_v['avg'] = listagg
+                elif('sum' in i):
+                    self.parent.aggregate_v['sum'] = listagg
+                elif('distinct' in i):
+                    distinctagg = []
+                    d1 = {}
+                    d2 = {}
+                    if s[0] in self.parent.dict1.keys():
+                        z = self.parent.dict1[s[0]]
+                        d1[z] = None
+                    elif s[0] in self.parent.dict2.keys():
+                        z = self.parent.dict2[s[0]]
+                        d2[1] = None
+                    distinctagg.append(d1)
+                    distinctagg.append(d2)
 
+            elif '.' not in i:
+                if i in self.parent.dict1.keys():
+                    self.parent.table1_print_attributes.append(int(self.parent.dict1[i]))
+                elif i in self.parent.dict2.keys():
+                    self.parent.table2_print_attributes.append(int(self.parent.dict2[i]))
+
+            elif '(' not in i:
+                splittedstring = i.split('.')
+                x = splittedstring[1]
+                if(splittedstring[0] == self.parent.table1):
+                    self.parent.table1_print_attributes.append(int(self.parent.dict1[x]))
+                elif(self.parent.table2_exists==1):
+                    if(splittedstring[0] == self.parent.table2):
+                        self.parent.table2_print_attributes.append(int(self.parent.dict2[x]))
+
+            
+     
     def directcreate(self):
         dict1 = {}
         dict2 = {}
@@ -161,15 +211,28 @@ class parse(query):
 
         return list1,list2,list3
 
-    def result(self,line):
+    def result(self,line):        
+        
         selectStmt = Forward()
         SELECT = Keyword("select", caseless=True)
         FROM = Keyword("from", caseless=True)
         WHERE = Keyword("where", caseless=True)
+        
+        #Error Handling for wrong spellings
+        selectword = line.split(' ')[0]
+        if(selectword!=SELECT):
+            print "Syntax Error! Wrong Spelling of Select"
+            exit()        
 
-        ident          = Word(alphas, alphanums + "_$" ).setName("identifier")
+        fromword = line.split(' ')[2]
+        if(fromword!=FROM):
+            print "Syntax Error! Wrong Spelling of From"
+            exit()
+
+        ####
+        ident          = Word(alphas, alphanums + "_$" + "(" + ")").setName("identifier")
         columnName     = ( delimitedList( ident, ".", combine=True ) ).setName("column name")
-        columnNameList = Group( delimitedList( columnName ) )
+        columnNameList = Group( delimitedList(columnName))
         tableName      = ( delimitedList( ident, ".", combine=True ) ).setName("table name")
         tableNameList  = Group( delimitedList( tableName ) )
 
@@ -359,5 +422,5 @@ class data_retrieve(query):
 
 
 
-q = query("SELECT AA, DB from table1,table2 WHERE DB > 15000 and AA = BB")
+q = query("SELECT A,distinct(D) from table1,table2 WHERE D > 15000 and C = D")
 #z = query("SELECT * from table1")
