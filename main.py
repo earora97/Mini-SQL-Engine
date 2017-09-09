@@ -20,16 +20,13 @@ class parse(query):
 
     def separatequery(self,line,inp):
         self.parent.table1 = line.tables[0]
-        print "Table1 Name:",self.parent.table1
         
         self.parent.table2_exists = 0
         if(len(line.tables)>1):
             self.parent.table2_exists = 1
             self.parent.table2 = line.tables[1]
-     #   print "Table 2 Exists:", self.table2_exists
 
         self.parent.printcollist = line.columns
-      #  print "Columns To Be Printed:",self.printcollist
 
         self.parent.andFlag = 0
         self.parent.orFlag = 0
@@ -39,13 +36,31 @@ class parse(query):
                 self.parent.andFlag = 1
             elif(line.where[0][2]=='or'):
                 self.parent.orFlag = 1
-        #print self.andFlag , self.orFlag
 
         self.parent.dict1 , self.parent.dict2 = inp.directcreate()
         self.parent.table1_where,self.parent.table2_where,self.parent.table_double_where = inp.dictry(line.where[0])
-        
-      #  print "Parsed Query:",output
 
+        self.parent.table1_print_attributes = []
+        self.parent.table2_print_attributes = []
+        
+        for i in self.parent.printcollist:
+            if '.' not in i:
+                if i in self.parent.dict1.keys():
+                    self.parent.table1_print_attributes.append(int(self.parent.dict1[i]))
+                elif i in self.parent.dict2.keys():
+                    self.parent.table2_print_attributes.append(int(self.parent.dict2[i]))
+
+            else:
+                splittedstring = i.split('.')
+                x = splittedstring[1]
+                if(splittedstring[0] == self.parent.table1):
+                    self.parent.table1_print_attributes.append(int(self.parent.dict1[x]))
+                elif(table2_exists==1):
+                    if(splittedstring[0] == self.parent.table2):
+                        self.parent.table2_print_attributes.append(int(self.parent.dict2[x]))
+
+        print self.parent.table1_print_attributes
+        print self.parent.table2_print_attributes    
 
     def directcreate(self):
         dict1 = {}
@@ -192,5 +207,5 @@ class parse(query):
         parsedstring = simpleSQL.parseString(line)
         return parsedstring
 
-q = query("SELECT A,C,D from table1,table2 WHERE A = '5' AND D = '6'")
-z = query("SELECT * from table1")
+q = query("SELECT table1.A,C,D from table1,table2 WHERE A = '5' AND D = '6'")
+#z = query("SELECT * from table1")

@@ -1,11 +1,11 @@
 <begin_table>
 table1
-A
+AA
 B
 C
 <end_table>
 <begin_table>
 table2
-B
+AA
 D
 <end_table>

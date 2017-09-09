@@ -120,7 +120,7 @@ class parse(query):
     def directcreate(self):
         dict1 = {}
         dict2 = {}
-        f=open("./files/"+"metadata.txt","r")
+        f=open("metadata.txt","r")
 
         for i in f:
             if self.parent.table1 in i:
@@ -337,9 +337,9 @@ class parse(query):
 class data_retrieve(query):
     def __init__(self,parent):
         self.parent=parent
-        table1_file=open("./files/"+self.parent.table1 +".csv")
+        table1_file=open(self.parent.table1 +".csv")
         if self.parent.table2_exists:
-            table2_file=open("./files/"+self.parent.table2+".csv")
+            table2_file=open(self.parent.table2+".csv")
         for l1 in table1_file:
             cond1=True
             cond2=True
