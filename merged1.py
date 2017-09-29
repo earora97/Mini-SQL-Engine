@@ -7,12 +7,12 @@ import re,sys
 class query:
     def __init__(self,s):
         self.statement = s
-
         self.aggregate_func={}
         self.aggregate_v={"min":None,"max":None,"sum":None, "avg":None}
         self.distinct=[{},{}]
-        newinput = parse(self) # New instance of Parse
+        newinput = parse(self)
         output = newinput.result(s)
+        #print output
         newinput.separatequery(output,newinput)
         self.printHeaders()
         x=data_retrieve(self)
@@ -38,15 +38,13 @@ class parse(query):
 
     def separatequery(self,line,inp):
         self.parent.table1 = line.tables[0]
-
+        #print "hii",self.parent.table1
         self.parent.table2_exists = 0
         if(len(line.tables)>1):
             self.parent.table2_exists = 1
             self.parent.table2 = line.tables[1]
 
-
-        self.parent.printcollist = line.columns
-
+        #print self.parent.table2_exists
         ident=Word(alphas, alphanums + "_$" )
         columnName=Group(ident | (ident + '.' + ident) | (ident + '(' + ident + ')'))
 
@@ -60,6 +58,17 @@ class parse(query):
 
         self.parent.dict1 , self.parent.dict2 = inp.directcreate()
         self.parent.table1_where,self.parent.table2_where,self.parent.table_double_where = inp.dictry(line.where)
+
+        self.parent.printcol = line.columns
+        if(self.parent.printcol!='*'):
+            self.parent.printcollist = self.parent.printcol
+        else:
+            self.parent.printcollist = []
+            for i in self.parent.dict1:
+                self.parent.printcollist.append(i)
+            if(self.parent.table2_exists):
+                for i in self.parent.dict2:
+                    self.parent.printcollist.append(i)
 
         self.parent.table1_print_attributes = []
         self.parent.table2_print_attributes = []
@@ -88,10 +97,15 @@ class parse(query):
                     d2 = {}
                     if s[0] in self.parent.dict1.keys():
                         z = self.parent.dict1[s[0]]
+                        self.parent.table1_print_attributes.append(int(z))
                         d1[z] = None
+                        self.parent.aggregate_func['distinct']=[1,z]
+
                     elif s[0] in self.parent.dict2.keys():
                         z = self.parent.dict2[s[0]]
-                        d2[1] = None
+                        self.parent.table2_print_attributes.append(int(z))
+                        d2[z] = None
+                        self.parent.aggregate_func['distinct']=[2,z]
                     distinctagg.append(d1)
                     distinctagg.append(d2)
 
@@ -115,12 +129,14 @@ class parse(query):
                     if ind['second_val'] in self.parent.table2_print_attributes:
                         self.parent.table2_print_attributes.remove(ind['second_val'])
 
-
+        if(self.parent.table1_print_attributes==[]):
+            if(self.parent.table2_print_attributes==[]):
+                print "Unknown column in 'field list'"
 
     def directcreate(self):
         dict1 = {}
         dict2 = {}
-        f=open("./files/"+"metadata.txt","r")
+        f=open("metadata.txt","r")
 
         for i in f:
             if self.parent.table1 in i:
@@ -337,9 +353,14 @@ class parse(query):
 class data_retrieve(query):
     def __init__(self,parent):
         self.parent=parent
-        table1_file=open("./files/"+self.parent.table1 +".csv")
+        try:
+            table1_file=open(self.parent.table1 +".csv")
+        except Exception, e:
+            print "No such table found"
+            exit()
+        
         if self.parent.table2_exists:
-            table2_file=open("./files/"+self.parent.table2+".csv")
+            table2_file=open(self.parent.table2+".csv")
         for l1 in table1_file:
             cond1=True
             cond2=True
@@ -471,21 +492,22 @@ class data_retrieve(query):
             else:
                 self.parent.aggregate_v["avg"]=((self.parent.aggregate_v["avg"])*(self.n)+int(line[self.parent.aggregate_func['avg'][1]-1]))/(self.n+1)
                 self.n=self.n+1
-
         if 'distinct' in self.parent.aggregate_func.keys():
-            for t,col in self.parent.aggregate_func['distinct']:
-                if t==1:
-                    line=[x.strip() for x in line1.split(',')]
-                else:
-                    line=[x.strip() for x in line2.split(',')]
-                if col not in self.parent.distinct[t-1].keys():
-                    self.parent.distinct[t-1][col]=[]
-                if line[col-1] in self.parent.distinct[t-1][col]:
-                    return False
-                else:
-                    self.parent.distinct[t-1][col].append(line[col-1])
+            t= self.parent.aggregate_func['distinct'][0]
+            col= self.parent.aggregate_func['distinct'][1]
+            if t==1:
+                line=[x.strip() for x in line1.split(',')]
+            else:
+                line=[x.strip() for x in line2.split(',')]
+            if col not in self.parent.distinct[t-1].keys():
+                self.parent.distinct[t-1][col]=[]
+            if line[col-1] in self.parent.distinct[t-1][col]:
+                return False
+            else:
+                self.parent.distinct[t-1][col].append(line[col-1])
         return True
 
 
 sqlQuery=sys.argv[1]
+#sqlQuery="SELECT AA FROM table1"
 q = query(sqlQuery)
